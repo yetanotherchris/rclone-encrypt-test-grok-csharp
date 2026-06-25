@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright © 2026 yetanotherchris")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0+bbb8de8bcc43c83f4463c3ed5a0369d72bb16cd4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0+9a75827ba44bcc73936e7cea6c6d29b34a3311f3")]
 [assembly: System.Reflection.AssemblyProductAttribute("rclone-encrypt-test-grok-csharp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("rclone-encrypt-test-grok-csharp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.1.0.0")]

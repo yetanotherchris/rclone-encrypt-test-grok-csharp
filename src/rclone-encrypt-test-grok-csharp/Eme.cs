@@ -3,8 +3,8 @@ using System.Security.Cryptography;
 namespace RcloneEncrypt;
 
 /// <summary>
-/// EME (ECB-Mix-ECB) port matching rclone/eme semantics.
-/// L-table always uses forward AES encrypt.
+/// Faithful EME implementation (ECB-Mix-ECB) matching rclone.
+/// L-table is always generated with forward (Encrypt) AES.
 /// </summary>
 internal static class Eme
 {
@@ -16,7 +16,7 @@ internal static class Eme
         if (tweak.Length != BlockSize) throw new ArgumentException("tweak");
         if (input.Length % BlockSize != 0 || input.Length == 0) throw new ArgumentException("input");
         int m = input.Length / BlockSize;
-        if (m < 1 || m > 128) throw new ArgumentException("blocks");
+        if (m < 1 || m > 128) throw new ArgumentException("1-128 blocks");
 
         byte[][] LTable = TabulateL(aes, m);
 
