@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/rclone-encrypt-test-grok-csharp/rclone-encrypt-test-grok-csharp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/rclone-encrypt-test-grok-csharp.Tests/rclone-encrypt-test-grok-csharp.Tests.csproj" />
+  </Folder>
+</Solution>

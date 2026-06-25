@@ -1,0 +1,119 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            suffix: linux-amd64
+          - os: ubuntu-latest
+            rid: linux-arm64
+            suffix: linux-arm64
+          - os: macos-latest
+            rid: osx-x64
+            suffix: darwin-amd64
+          - os: macos-latest
+            rid: osx-arm64
+            suffix: darwin-arm64
+          - os: windows-latest
+            rid: win-x64
+            suffix: windows-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION="dev"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Publish (self-contained, trimmed)
+        run: |
+          dotnet publish src/rclone-encrypt-test-grok-csharp -c Release -r ${{ matrix.rid }} -o dist/${{ matrix.suffix }} \
+            -p:PublishSingleFile=true -p:SelfContained=true -p:PublishTrimmed=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mv dist/${{ matrix.suffix }}/rclone-encrypt-test-grok-csharp dist/${{ matrix.suffix }}/rclone-encrypt-test-grok-csharp-${{ matrix.suffix }}
+          tar -C dist/${{ matrix.suffix }} -czf rclone-encrypt-test-grok-csharp-${{ matrix.suffix }}.tar.gz .
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mv dist/${{ matrix.suffix }}/rclone-encrypt-test-grok-csharp.exe dist/${{ matrix.suffix }}/rclone-encrypt-test-grok-csharp-${{ matrix.suffix }}.exe
+          Compress-Archive -Path dist/${{ matrix.suffix }}/* -DestinationPath rclone-encrypt-test-grok-csharp-${{ matrix.suffix }}.zip
+      - name: Upload artifact (unix)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rclone-encrypt-test-grok-csharp-${{ matrix.suffix }}
+          path: rclone-encrypt-test-grok-csharp-${{ matrix.suffix }}.tar.gz
+      - name: Upload artifact (windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rclone-encrypt-test-grok-csharp-${{ matrix.suffix }}
+          path: rclone-encrypt-test-grok-csharp-${{ matrix.suffix }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine version
+        id: version
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+      - name: Switch to main
+        run: |
+          git checkout main || git checkout -b main
+          git pull --rebase origin main || true
+      - name: Update Scoop manifest
+        shell: pwsh
+        run: ./updatescoop.ps1 -Version ${{ steps.version.outputs.VERSION }}
+      - name: Update Brew formula
+        shell: pwsh
+        run: ./updatebrew.ps1 -Version ${{ steps.version.outputs.VERSION }}
+      - name: Commit manifests
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update package manifests to ${{ github.ref_name }}"
+          file_pattern: "rclone-encrypt-test-grok-csharp.json Formula/rclone-encrypt-test-grok-csharp.rb"
